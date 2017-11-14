@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical" 
+    android:background="@drawable/background">
+    
+<!-- 历史测试记录文件列表 -->
+    <LinearLayout 
+        android:id="@+id/ll_filelist_draw"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="0.6"
+        android:orientation="vertical">
+    </LinearLayout>
+	<LinearLayout 
+	    android:id="@+id/test_result_view"
+	    android:layout_width="match_parent"
+	    android:layout_height="0dp"
+	    android:layout_weight="0.4"
+	    android:orientation="vertical">
+	</LinearLayout>
+</LinearLayout>
+

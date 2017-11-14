@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android" >
+    
+	<item
+        android:id="@+id/title_btn1"
+        android:orderInCategory="10"
+        android:showAsAction="never"
+        android:icon="@drawable/title_btn_function"
+        android:title="结果记录"/>
+	<item
+        android:id="@+id/title_btn2"
+        android:orderInCategory="10"
+        android:showAsAction="never"
+        android:icon="@drawable/title_btn_function"
+        android:title="检测记录"/>
+	<item
+        android:id="@+id/title_btn3"
+        android:orderInCategory="10"
+        android:showAsAction="never"
+        android:icon="@drawable/title_btn_function"
+        android:title="参数记录"/>
+</menu>

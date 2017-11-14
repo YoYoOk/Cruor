@@ -1,0 +1,39 @@
+<resources xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!--
+        Base application theme for API 14+. This theme completely replaces
+        AppBaseTheme from BOTH res/values/styles.xml and
+        res/values-v11/styles.xml on API 14+ devices.
+    -->
+    <style name="AppBaseTheme" parent="android:Theme.Holo.Light.DarkActionBar">
+        <!-- API 14 theme customizations can go here. -->
+        <item name="android:actionOverflowButtonStyle">@style/OverflowStyle</item>
+    </style>
+    
+    <!-- Application theme. -->
+    <style name="AppTheme" parent="AppBaseTheme">
+        <!-- All customizations that are NOT specific to a particular API-level can go here. -->
+        <!-- <item name="android:actionButtonStyle">@style/actionButtonStyle</item> -->
+        <!-- <item name="android:popupMenuStyle">@style/popupMenuStyle</item> -->
+        <!-- <item name="android:actionMenuTextAppearance">@style/hehe</item> -->
+    </style>
+	<!--  将ActionBar 中的三个点换成其他的图片你 -->
+    <style name="OverflowStyle">
+		<item name="android:src">@drawable/actionbar_icon</item>  
+    </style>
+   
+  <!--  <style name="actionButtonStyle" parent="@android:style/Widget.ActionButton">
+       <item name="android:textColor">#ff00fe</item>
+   </style> -->
+   
+   <!-- 长按列表项弹出删除按钮  背景色设置透明色 -->
+   <style name="MyDialogStyle" parent="@android:Theme.Dialog">
+        <item name="android:windowFrame">@null</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowIsFloating">true</item>
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:backgroundDimEnabled">false</item> 
+    </style>
+	
+</resources>

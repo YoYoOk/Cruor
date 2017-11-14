@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical" 
+    android:background="@drawable/background">
+<!-- 扫描显示部分 -->  
+	<LinearLayout 
+  	    android:layout_width="match_parent"
+  	    android:layout_height="wrap_content"
+  	    android:orientation="horizontal">
+  	    <Button 
+	  	    android:id="@+id/param_config"
+	  	    android:layout_width="wrap_content"
+	  	    android:layout_height="wrap_content"
+	  	    android:text="@string/param_config"/>
+	  	<Button 
+	  	    android:id="@+id/startScan"
+	  	    android:layout_width="0dp"
+	  	    android:layout_height="wrap_content"
+	  	    android:layout_weight="1"
+	  	    android:text="@string/startScan"/>
+	  	<Button 
+	  	    android:id="@+id/stopScan"
+	  	    android:layout_width="wrap_content"
+	  	    android:layout_height="wrap_content"
+	  	    android:text="@string/stopScan"/>
+  	</LinearLayout>
+    <RelativeLayout  
+        android:layout_width="match_parent"  
+        android:layout_height="wrap_content" 
+        android:orientation="horizontal">  
+  
+        <TextView  
+            android:layout_width="wrap_content"  
+            android:layout_height="wrap_content"  
+            android:layout_alignParentLeft="true"
+            android:text="采集显示" />  
+		<TextView
+		    android:id="@+id/times"  
+            android:layout_width="wrap_content"  
+            android:layout_height="wrap_content"
+            android:layout_alignParentRight="true"
+            android:textColor="#FF0000"
+            android:text="没有连接"/>             
+  
+    </RelativeLayout>  
+  	
+    <!-- 配置LinearLayout下的子控件必须指定orientation属性 不然报错说默认是horizontal水平方向 -->
+    <LinearLayout 
+        android:layout_width="match_parent"  
+        android:layout_height="0dp" 
+        android:layout_weight="1"
+        android:orientation="vertical">
+        <LinearLayout 
+            android:id="@+id/drawline_widget"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="0.5"
+            android:orientation="vertical"></LinearLayout>
+        <LinearLayout 
+            android:id="@+id/drawline_result"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="0.5"
+            android:orientation="vertical"></LinearLayout>
+    </LinearLayout>
+    <Button 
+        android:id="@+id/btn_change"
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:layout_margin="0dp"
+        android:text="检测指标"/>
+</LinearLayout>
