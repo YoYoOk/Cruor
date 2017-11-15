@@ -32,6 +32,6 @@ JNIEXPORT jdoubleArray JNICALL Java_com_yj_cruor_1testing_main_ScanDisplayActivi
 	env->SetDoubleArrayRegion(source, 0, length, source_arr);
 	env->ReleaseDoubleArrayElements(source, source_arr, 0);//释放资源  切记不可忘记
 	env-> ReleaseDoubleArrayElements(result, result_arr, 0);
-	LOGE("######%d",length);
+//	LOGE("######%d",length);
 	return result;
 }

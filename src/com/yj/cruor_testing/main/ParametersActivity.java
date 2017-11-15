@@ -16,6 +16,7 @@ public class ParametersActivity extends Activity {
 	private int start_frq_original;
 	private int end_frq_original;
 	private int frq_interval_original;
+	private int times_original;//次数
 	private String start_frq; // 开始频率 两个字节
 	private String end_frq; // 截止频率 两个字节
 	private String frq_interval;// 步进频率 1个字节
@@ -53,6 +54,7 @@ public class ParametersActivity extends Activity {
 				Intent intent = new Intent();
 				intent.putExtra("params", resultData);
 				intent.putExtra("value", new int[] { start_frq_original, end_frq_original, frq_interval_original });
+				intent.putExtra("times", times_original);
 				setResult(RESULT_OK, intent);
 				finish();
 			}
@@ -87,6 +89,7 @@ public class ParametersActivity extends Activity {
 		enlarge = dataConvertHex(et_enlarge.getText().toString().trim()); // 程控放大
 																			// 2个字节
 		enlarge = HighExchangeLow(enlarge);
+		times_original = Integer.parseInt(et_times.getText().toString().trim());
 		times = dataConvertHex(et_times.getText().toString().trim()); // 扫描次数
 																		// 2个字节
 		times = HighExchangeLow(times);

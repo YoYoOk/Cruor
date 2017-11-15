@@ -3,7 +3,6 @@ package com.yj.cruor_testing.main;
 import java.io.File;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
@@ -29,6 +28,7 @@ import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattService;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
+import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -40,15 +40,17 @@ import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
-import android.os.PowerManager;
-import android.os.PowerManager.WakeLock;
+import android.provider.Settings;
+import android.provider.Settings.SettingNotFoundException;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.ViewGroup.LayoutParams;
+import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -81,7 +83,7 @@ public class ScanDisplayActivity extends Activity{
 	private boolean mViewChange;//切换view
 	private View view;//指标显示部分
 	//发送控制指令数据
-	byte[] sendData = ConvertUtils.hexStringToBytes("861101011027e02e32038002000202000a0068");// 要发送的数据 字节数据 故此先将16进制字符串转换成字节发送
+	byte[] sendData = ConvertUtils.hexStringToBytes("861101011027e02e3203800200020a000a0068");// 要发送的数据 字节数据 故此先将16进制字符串转换成字节发送
 	byte[] sendData_stop = ConvertUtils.hexStringToBytes("8603030168");// 要发送停止扫描的数据 表示用来
 	MyHandler handler;// 定义消息队列处理
 	
@@ -99,8 +101,9 @@ public class ScanDisplayActivity extends Activity{
 	private List<Double> yListFilter;//滤波之后的曲线 保存 yList去画图
 	private double[] source;
 	private List<Byte> listByte;
-	private int times = 401;// 一次多少个频率点
+//	private int count = 401;// 一次多少个频率点
 	private int iCount = 0;// 判断当前扫描第几次的数据到来
+	private int times_point = 3;//系统屏幕大概亮多少次的时候暗屏默认是3次的时候暗屏
 	private String title = "幅值曲线";// 曲线显示的标题
 	private String title_result = "凝血曲线";
 
@@ -111,7 +114,7 @@ public class ScanDisplayActivity extends Activity{
 	String tempStr = "";// 测试用
 
 	private int[] frequency_value = { 100, 120, 50 };// 从参数配置传上来的起止频率 步进频率 默认为100,120,50
-
+	private int times = 10;//默认是10次
 	// 保存excel使用的变量
 //	private String excelPath;// 保存到sd卡路径
 	private String str_date;//保存的时候的当前时间字符串
@@ -333,12 +336,12 @@ public class ScanDisplayActivity extends Activity{
 			// 每次开始扫描都必须要重新设置x轴的值，因为在配置中是要发生变化的
 			// 设置x轴的值
 			double tempVar = frequency_value[0] * 1000;
-			times = (frequency_value[1] - frequency_value[0]) * 1000 / frequency_value[2] + 1;
-			for (int i = 0; i < times; i++) {
+			int count = (frequency_value[1] - frequency_value[0]) * 1000 / frequency_value[2] + 1;
+			for (int i = 0; i < count; i++) {
 				xList.add(tempVar / 1000);
 				tempVar = tempVar + frequency_value[2];
 			}
-			source = new double[times];//每次都创建太消耗内存了   解决方案在发送的时候根据x轴的数据创建数组
+			source = new double[count];//每次都创建太消耗内存了   解决方案在发送的时候根据x轴的数据创建数组
 			beforeDate = new Date();
 		}
 		read();//读取数据
@@ -380,7 +383,6 @@ public class ScanDisplayActivity extends Activity{
         }
 	}
 	
-	
 	//初始化选项菜单
 	@Override
 	public boolean onCreateOptionsMenu(Menu menu) {
@@ -407,15 +409,12 @@ public class ScanDisplayActivity extends Activity{
 		}
 		return true;
 	}
-	
 	/**
 	 * 读函数
 	 */
 	private void read(){
 		mBluetoothLeService.setCharacteristicNotification(readCharacteristic, true);
 	}
-
-	
 	//通过服务控制不同的事件
 	//使用匿名类 使用广播监听  蓝牙连接、可读写的状态
 	private final BroadcastReceiver mGattUpdateReceiver = new BroadcastReceiver() {
@@ -495,29 +494,6 @@ public class ScanDisplayActivity extends Activity{
 		// 将数据保存了之后listByte得清空
 		listByte.removeAll(listByte);
 		handler.sendMessage(handler.obtainMessage(1));
-		
-		/*// 每次来数据时候都获取两次间隔时间
-		currentDate = new Date();
-		interval_time = (currentDate.getTime() - beforeDate.getTime());
-		interval_time = interval_time / 1000;
-		pointf.x = interval_time;
-		// 一定要在求两次时间之后，不然会影响凝血曲线时间的判断
-		Integer tempData = Collections.max(yList);
-		maxValue = (float) tempData * 2 / 65536;
-		maxValue = (float)(Math.round(maxValue* 10000))/10000;//保留小数点后四位
-		pointf.y = maxValue;
-		vecTegPoint.add(pointf);
-//		Log.e("最大值", maxValue + "");   //保留后四位
-		//又来了一次的数据 先清空之前的数据
-		mService.clearValue();
-		flag_result = true;
-		flag = true;
-		iCount++;
-		handler.sendMessage(handler.obtainMessage(3));
-		// 判断接收到的数据有没有扫描一次的数据以上 则开始画图
-		// 将yList保存到excel中
-		SaveActionUtils.exportCSV(excel_Source_File,yListTemp);//保存原始数据
-		SaveActionUtils.exportCSV(excel_Result_File, pointf);*/
 	}
     
 
@@ -580,6 +556,15 @@ public class ScanDisplayActivity extends Activity{
 			case 3:
 //				Toast.makeText(ScanDisplayActivity.this, "第" + iCount + "次扫描结束",
 //						Toast.LENGTH_SHORT).show();
+				//每次扫描到3次结束的时候暗屏  
+				if(iCount == times_point){
+					setScreenBrightness(20);
+				}
+				if(iCount == times){
+					//扫描结束恢复到系统自动的亮度
+					setScreenBrightness(getSystemScreenBrightness());
+				}
+				btn_Start_Scan.setKeepScreenOn(false);//扫描结束不需要再保持屏幕常亮
 				tv_times.setText("第" + iCount + "次扫描结束");
 				break;
 			}
@@ -599,7 +584,6 @@ public class ScanDisplayActivity extends Activity{
 	protected void onResume() {
 		super.onResume();
 		//每次页面交互的时候 注册广播 监听
-		
 //		registerReceiver(mGattUpdateReceiver, makeGattUpdateIntentFilter());//注册监听蓝牙一些服务的广播
 //		 if (mBluetoothLeService != null) {
 //            final boolean result = mBluetoothLeService.connect(mDeviceAddress);//注册广播的时候连接去连接
@@ -641,6 +625,7 @@ public class ScanDisplayActivity extends Activity{
 			if (resultCode == RESULT_OK) {
 				String paramConfig = intent.getStringExtra("params");
 				frequency_value = intent.getIntArrayExtra("value");
+				times = intent.getIntExtra("times", 10);//默认是10
 				sendData = ConvertUtils.hexStringToBytes(paramConfig);
 			}
 			break;
@@ -692,11 +677,71 @@ public class ScanDisplayActivity extends Activity{
 		finish();
 		return flag;
 	}
-	
+	//Begin调节屏幕亮暗度
+  	/**
+  	 * 如果需要亮度调节，首先需要设置屏幕亮度调节模式为手动模式
+  	 */
+  	public void setScrennManualMode() {
+  		ContentResolver contentResolver = this.getContentResolver();
+  		try {
+  			int mode = Settings.System.getInt(contentResolver,
+  					Settings.System.SCREEN_BRIGHTNESS_MODE);
+  			if (mode == Settings.System.SCREEN_BRIGHTNESS_MODE_AUTOMATIC) {
+  				Settings.System.putInt(contentResolver, Settings.System.SCREEN_BRIGHTNESS_MODE,
+  						Settings.System.SCREEN_BRIGHTNESS_MODE_MANUAL);
+  			}
+  		} catch (Settings.SettingNotFoundException e) {
+  			e.printStackTrace();
+  		}
+  	}
+  	/**
+  	 * 获取系统屏幕亮度值。屏幕最大亮度值255，最低亮度值为0.
+  	 * @return
+  	 */
+  	private int getSystemScreenBrightness() {
+  		int systemBrightness = 0;
+  		try {
+  			systemBrightness = Settings.System.getInt(this.getContentResolver(),
+  					Settings.System.SCREEN_BRIGHTNESS);
+  		} catch (SettingNotFoundException e) {
+  			e.printStackTrace();
+  		}
+  		return systemBrightness;
+  	}
+  	/**
+  	 * 获取当前屏幕亮度值
+  	 * @return
+  	 */
+  	private float getCurrentScreenBrightness(){
+  		return this.getWindow().getAttributes().screenBrightness;
+  	}
+  	/**
+  	 * 设置屏幕亮度值
+  	 */
+  	private void setScreenBrightness(int value) {
+  		setScrennManualMode();//将其设置为手动模式
+  		WindowManager.LayoutParams lp = this.getWindow().getAttributes();
+  		lp.screenBrightness = value < 0 ? 20/255f : value/255f;
+  		this.getWindow().setAttributes(lp);
+  	}
+  	//End调节屏幕亮暗度
+  	/** 
+  	 * 触摸屏事件  点击的时候屏幕回到系统的亮度
+  	 */
+  	@Override
+  	public boolean onTouchEvent(MotionEvent event) {
+  		if(getCurrentScreenBrightness() == 20/255f){
+  			//说明是在采集中 在扫描中 将其暗屏
+//  			Toast.makeText(this, "屏幕点击事件", Toast.LENGTH_SHORT).show();
+  			setScreenBrightness(getSystemScreenBrightness());//但是隔一段时间自动暗屏，如果是在扫描的时候的话
+  			times_point = iCount + 2;
+  		}//如果不是 是暗屏的状态就不管
+  		return super.onTouchEvent(event);
+  	}
+	//Start    Java的JNI技术
 	static{
 		System.loadLibrary("CALLC");
 	}
-	
 	public native double[] process_Data(double[] source);//本地方法 对数据滤波处理的算法
-	
+	//End      Java的JNI技术
 }

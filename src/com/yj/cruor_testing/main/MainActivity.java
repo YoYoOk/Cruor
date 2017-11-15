@@ -7,13 +7,17 @@ import com.yj.cruor_testing.database.DatabaseHelper;
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothManager;
+import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
+import android.provider.Settings;
+import android.provider.Settings.SettingNotFoundException;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewConfiguration;
 import android.view.WindowManager;
@@ -33,6 +37,7 @@ public class MainActivity extends Activity {
 	private Button btn_search;//搜索周围的蓝牙设备
 	private Button btn_scan_display;//进入扫描显示页面
 	private Button btn_history;//查看历史记录
+	private Button btn_information;
 //	private static String deviceName = "CC41-A";
 	private static String deviceAddress = "00:15:83:00:80:FB";// 要连接的目标蓝牙设备的地址 默认的
 	public static DatabaseHelper dbHelper;//sqlite数据库的
@@ -49,6 +54,7 @@ public class MainActivity extends Activity {
 		btn_search = (Button)findViewById(R.id.search_device);
 		btn_scan_display = (Button)findViewById(R.id.scan_display);
 		btn_history = (Button)findViewById(R.id.history);
+		btn_information = (Button)findViewById(R.id.information);
 		dbHelper = new DatabaseHelper(this, "CruorTest.db", null, 1);//升级数据库 将参数值改成PointF
 		dbHelper.getWritableDatabase();//在此处调用表
 		if(!getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)){
@@ -89,7 +95,12 @@ public class MainActivity extends Activity {
 				startActivity(intent);
 			}
 		});
-		
+		btn_information.setOnClickListener(new OnClickListener() {
+			@Override
+			public void onClick(View v) {
+				//测试调节当前屏幕亮度
+			}
+		});
 	}
 	//活动返回来的地址数据
 	@Override
@@ -144,6 +155,4 @@ public class MainActivity extends Activity {
             e.printStackTrace();  
         }  
     }  
-	
-	
 }

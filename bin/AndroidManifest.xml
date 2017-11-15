@@ -11,11 +11,12 @@
     <uses-feature 
         android:name="android.hardware.bluetooth_le"
         android:required="true"/>
-    <uses-permission android:name="android.permission.BLUETOOTH" />
+    <uses-permission android:name="android.permission.BLUETOOTH" /><!-- 获取蓝牙4.0操作的权限 -->
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" /><!-- 获取sd卡读写的权限 -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.WAKE_LOCK"/><!-- 获取屏幕操作的权限 -->
+    <uses-permission android:name="android.permission.WRITE_SETTINGS"/><!-- 获取设置系统屏幕亮度值的权限 -->
     <application
         android:name=".CrashApplication"
         android:allowBackup="true"
