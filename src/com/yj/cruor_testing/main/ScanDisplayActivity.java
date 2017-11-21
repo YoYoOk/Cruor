@@ -114,6 +114,7 @@ public class ScanDisplayActivity extends Activity{
 	String tempStr = "";// 测试用
 
 	private int[] frequency_value = { 100, 120, 50 };// 从参数配置传上来的起止频率 步进频率 默认为100,120,50
+	private int pointCount;//一次多少个点
 	private int times = 10;//默认是10次
 	// 保存excel使用的变量
 //	private String excelPath;// 保存到sd卡路径
@@ -171,7 +172,7 @@ public class ScanDisplayActivity extends Activity{
 			public void run() {
 				handler.sendMessage(handler.obtainMessage(2));// 给消息队列发送2标记 定时是为了画曲线
 			}
-		}, 100, 10);
+		}, 100, 4);//永远不会出现没法显示的情况
 		btn_Start_Scan.setOnClickListener(new OnClickListener() {
 			@Override
 			public void onClick(View v) {
@@ -336,12 +337,12 @@ public class ScanDisplayActivity extends Activity{
 			// 每次开始扫描都必须要重新设置x轴的值，因为在配置中是要发生变化的
 			// 设置x轴的值
 			double tempVar = frequency_value[0] * 1000;
-			int count = (frequency_value[1] - frequency_value[0]) * 1000 / frequency_value[2] + 1;
-			for (int i = 0; i < count; i++) {
+			pointCount = (frequency_value[1] - frequency_value[0]) * 1000 / frequency_value[2] + 1;
+			for (int i = 0; i < pointCount; i++) {
 				xList.add(tempVar / 1000);
 				tempVar = tempVar + frequency_value[2];
 			}
-			source = new double[count];//每次都创建太消耗内存了   解决方案在发送的时候根据x轴的数据创建数组
+			source = new double[pointCount];//每次都创建太消耗内存了   解决方案在发送的时候根据x轴的数据创建数组
 			beforeDate = new Date();
 		}
 		read();//读取数据
@@ -452,24 +453,43 @@ public class ScanDisplayActivity extends Activity{
             //显示数据
             else if (BluetoothLeService.ACTION_DATA_AVAILABLE.equals(action)) {
             	byte[] data = intent.getByteArrayExtra(BluetoothLeService.EXTRA_DATA);
-            	//有数据来了
-            	if(!ConvertUtils.bytesToHexString(data).contains("FF01")){//不管是2个字节还是4个字节  应该说是不管是多少字节的数据
+            	//有数据来了  短路逻辑  若包含就去判断包含的这个是不是最后的
+            	tempStr = ConvertUtils.bytesToHexString(data);
+            	if(!tempStr.contains("FF01")){//不管是2个字节还是4个字节  应该说是不管是多少字节的数据
             		for(int i = 0; i < data.length; i++){
             			listByte.add(data[i]);
             		}
-            	}else{//包含 ff01
-            		tempStr = ConvertUtils.bytesToHexString(data);
-            		byte[] tempByte = ConvertUtils.hexStringToBytes(tempStr.substring(0, tempStr.indexOf("FF01")));
-            		for(int i = 0; i < tempByte.length; i++){
-            			listByte.add(tempByte[i]);
-            		}
-            		processBuffer();
-            		//判断是不是以ff01结尾的 若是的话 说明后面没有数据了 再添加了
-            		if(!tempStr.endsWith("FF01")){
-            			tempByte = ConvertUtils.hexStringToBytes(tempStr.substring(tempStr.indexOf("FF01") + 4));
-            			for(int i = 0; i < tempByte.length; i++){
-                			listByte.add(tempByte[i]);
+            	}else{//包含 ff01--还得判断此ff01是不是结尾的那个ff01//判断此ff01是不是真的结尾的那个ff01 
+            		if(tempStr.indexOf("FF01") % 2 != 0){
+            			Log.e("######", "#######" + tempStr + "#######"+listByte.size());
+            			for(int i = 0; i < data.length; i++){
+                			listByte.add(data[i]);
                 		}
+            		}else{
+	            		byte[] tempByte = ConvertUtils.hexStringToBytes(tempStr.substring(0, tempStr.indexOf("FF01")));
+	            		//极有可能 tempByte为空  因为是以ff01起头的  ---20171121 报错了很多次 脑子呆笨没有发现
+	            		if(tempByte != null){
+		            		for(int i = 0; i < tempByte.length; i++){
+		            			listByte.add(tempByte[i]);
+		            		}
+	            		}
+	//            		//？？？如何判断到底ff01是最后还是不是最后
+	            		if(listByte.size() < (pointCount*2)){//说明数据中包含了 ff01
+	            			tempByte = ConvertUtils.hexStringToBytes("FF01");
+	            			Log.e("######", "#######"+listByte.size());
+	            			for(int i = 0; i < tempByte.length; i++){
+		            			listByte.add(tempByte[i]);
+		            		}
+	            		}else{
+	            			processBuffer();
+	            		}
+	            		//判断是不是以ff01结尾的 若是的话 说明后面没有数据了 再添加了
+	            		if(!tempStr.endsWith("FF01")){
+	            			tempByte = ConvertUtils.hexStringToBytes(tempStr.substring(tempStr.indexOf("FF01") + 4));
+	            			for(int i = 0; i < tempByte.length; i++){
+	                			listByte.add(tempByte[i]);
+	                		}
+	            		}//此处仍然是有漏洞的，，，因为有可能接收到的数据并不是偶数  怎么破？----于20171121
             		}
             	}
             }
@@ -563,8 +583,8 @@ public class ScanDisplayActivity extends Activity{
 				if(iCount == times){
 					//扫描结束恢复到系统自动的亮度
 					setScreenBrightness(getSystemScreenBrightness());
+					btn_Start_Scan.setKeepScreenOn(false);//扫描结束不需要再保持屏幕常亮
 				}
-				btn_Start_Scan.setKeepScreenOn(false);//扫描结束不需要再保持屏幕常亮
 				tv_times.setText("第" + iCount + "次扫描结束");
 				break;
 			}
