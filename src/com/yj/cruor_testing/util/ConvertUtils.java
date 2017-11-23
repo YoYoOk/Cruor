@@ -42,4 +42,33 @@ public class ConvertUtils {
 		public static byte charToByte(char c) {
 			return (byte) "0123456789ABCDEF".indexOf(c);
 		}
+		
+		
+		/*
+		 * 将数据转成十六进制
+		 */
+		public static String dataConvertHex(String data) {
+			String str = Long.toHexString(Long.parseLong(data)).toUpperCase();
+			str = str.length() % 2 == 0 ? str : "0" + str;
+			return str;
+		}
+
+		/*
+		 * 将高字节转换成低字节
+		 */
+		public static String HighExchangeLow(String data) {
+			int size = data.length();
+			String str = "";
+			switch (size) {
+			case 2:// 即2个字节 但是目前只有输入1个字节如2次 0200
+				str = data + "00";
+				break;
+			case 4:// 两个字节 调换高字节和低字节
+				str = data.substring(2) + data.substring(0, 2);
+				break;
+			default:
+				break;
+			}
+			return str;
+		}
 }

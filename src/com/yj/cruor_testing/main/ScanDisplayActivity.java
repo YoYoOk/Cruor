@@ -3,6 +3,7 @@ package com.yj.cruor_testing.main;
 import java.io.File;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
@@ -82,9 +83,12 @@ public class ScanDisplayActivity extends Activity{
 	
 	private boolean mViewChange;//切换view
 	private View view;//指标显示部分
-	//发送控制指令数据
-	byte[] sendData = ConvertUtils.hexStringToBytes("861101011027e02e3203800200020a000a0068");// 要发送的数据 字节数据 故此先将16进制字符串转换成字节发送
+	//发送控制指令数据 默认100Hz - 120Hz步进50Hz 10ms 2次 
+	String sendString = "861101011027e02e3202800200020004050068";
+	byte[] sendData = ConvertUtils.hexStringToBytes("861101011027e02e3202800200020200050068");// 要发送的数据 字节数据 故此先将16进制字符串转换成字节发送
+	byte[] sendData_real = ConvertUtils.hexStringToBytes("861101011027e02e3202800200020004050068");
 	byte[] sendData_stop = ConvertUtils.hexStringToBytes("8603030168");// 要发送停止扫描的数据 表示用来
+	boolean isFirstSend = true;//是否是第一次发送
 	MyHandler handler;// 定义消息队列处理
 	
 	// 画曲线用得着
@@ -115,7 +119,7 @@ public class ScanDisplayActivity extends Activity{
 
 	private int[] frequency_value = { 100, 120, 50 };// 从参数配置传上来的起止频率 步进频率 默认为100,120,50
 	private int pointCount;//一次多少个点
-	private int times = 10;//默认是10次
+	private int times = 1024;//默认是10次
 	// 保存excel使用的变量
 //	private String excelPath;// 保存到sd卡路径
 	private String str_date;//保存的时候的当前时间字符串
@@ -177,7 +181,8 @@ public class ScanDisplayActivity extends Activity{
 			@Override
 			public void onClick(View v) {
 				btn_Start_Scan.setKeepScreenOn(true);//开始扫描之后就要让屏幕保持常亮
-				sendData(true);//发送数据
+				isFirstSend = true;
+				sendData(true,false);//发送数据
 			}
 		});
 		//停止扫描
@@ -185,7 +190,7 @@ public class ScanDisplayActivity extends Activity{
 			@Override
 			public void onClick(View v) {
 				btn_Start_Scan.setKeepScreenOn(false);//关闭的时候 就不用一直保持屏幕常亮
-				sendData(false);
+				sendData(false,false);
 			}
 		});
 		//参数配置
@@ -310,8 +315,8 @@ public class ScanDisplayActivity extends Activity{
 		tv_maValue = (TextView)view.findViewById(R.id.tv_maValue);
 	}
 	
-	//发送消息控制 抽取代码
-	public void sendData(boolean isStart){
+	//发送消息控制 抽取代码  第一个参数发送是否是开始采集命令，，，第二个参数是否是再次发送采集数据
+	public void sendData(boolean isStart,boolean isRepeatStart){
 		if(!mConnected){
 			//没有连接  提示没有连接
 			tv_times.setTextColor(Color.parseColor("#FF0000"));
@@ -333,7 +338,9 @@ public class ScanDisplayActivity extends Activity{
 			listByte.removeAll(listByte);// 先清掉数据
 			mService.updateRender(frequency_value[1], frequency_value[0]);
 			mService.clearValue();
-			mService_result.clearValue();
+			if(!isRepeatStart){
+				mService_result.clearValue();//要是第二次画就不用清除之前的数据
+			}
 			// 每次开始扫描都必须要重新设置x轴的值，因为在配置中是要发生变化的
 			// 设置x轴的值
 			double tempVar = frequency_value[0] * 1000;
@@ -343,7 +350,9 @@ public class ScanDisplayActivity extends Activity{
 				tempVar = tempVar + frequency_value[2];
 			}
 			source = new double[pointCount];//每次都创建太消耗内存了   解决方案在发送的时候根据x轴的数据创建数组
-			beforeDate = new Date();
+			if(!isRepeatStart){
+				beforeDate = new Date();
+			}
 		}
 		read();//读取数据
 		final int charaProp = characteristic.getProperties();
@@ -355,18 +364,25 @@ public class ScanDisplayActivity extends Activity{
             }
             //读取数据 在回调函数中
             if(isStart){
-	            characteristic.setValue(sendData);
+            	if(!isRepeatStart){
+            		characteristic.setValue(sendData);
+	            }else{
+	            	characteristic.setValue(sendData_real);//如果是第二次发送  则发送的是新的数据
+	            }
 	            mBluetoothLeService.writeCharacteristic(characteristic);
             }else{//发送停止信号
             	characteristic.setValue(sendData_stop);
 	            mBluetoothLeService.writeCharacteristic(characteristic);
+	            setScreenBrightness(getSystemScreenBrightness());//发送停止也让其亮屏
             }
 //                Toast.makeText(getApplicationContext(), "写入成功！", Toast.LENGTH_SHORT).show();
             tv_times.setTextColor(Color.parseColor("#5D5B5B"));
 			tv_times.setText("发送成功");
 			if(isStart){
 				//发送成功才保存  不然一直创建文件
-				saveInit();//执行保存数据操作的一些变量初始化  每次点击都创建新的csv文件  
+				if(!isRepeatStart){//因为只有第一次发送的时候 才新建文件
+					saveInit();//执行保存数据操作的一些变量初始化  每次点击都创建新的csv文件
+				}
 				// 此处与保存数据有关 每次开始扫描的时候就在当前项目下的表中创建一个Sheet表
 				SaveActionUtils.exportCSV(excel_Source_File, xList);
 				SaveActionUtils.exportCSV(excel_Filter_File, xList);
@@ -580,12 +596,32 @@ public class ScanDisplayActivity extends Activity{
 				if(iCount == times_point){
 					setScreenBrightness(20);
 				}
-				if(iCount == times){
+				if(iCount == times && !isFirstSend){
 					//扫描结束恢复到系统自动的亮度
 					setScreenBrightness(getSystemScreenBrightness());
 					btn_Start_Scan.setKeepScreenOn(false);//扫描结束不需要再保持屏幕常亮
 				}
 				tv_times.setText("第" + iCount + "次扫描结束");
+				if(iCount == 2 && isFirstSend){
+					isFirstSend = false;//说明是第一次发送然后重新计算起止频率
+					//最大值和最小值所在的频率点 强转成int
+					double minFrequency = xList.get(yList.indexOf(Collections.max(yList))) * 100;
+					double maxFrequency = xList.get(yList.indexOf(Collections.min(yList))) * 100;
+					if(minFrequency > maxFrequency){
+						double temp = minFrequency;
+						minFrequency = maxFrequency;
+						maxFrequency = temp;
+					}//为了防止意外，，，，，频率值大小 反了。
+					frequency_value[0] = (int)(minFrequency - (maxFrequency - minFrequency))/100;
+					frequency_value[1] = (int)(maxFrequency + (maxFrequency - minFrequency))/100;
+					//重新设置要发送的数据
+					sendData_real = ConvertUtils.hexStringToBytes(sendString.substring(0, 8) + 
+							ConvertUtils.HighExchangeLow(ConvertUtils.dataConvertHex(frequency_value[0] + "00")) + 
+							ConvertUtils.HighExchangeLow(ConvertUtils.dataConvertHex(frequency_value[1] + "00")) +
+							sendString.substring(16));//重新计算
+					Log.e("#####", ConvertUtils.bytesToHexString(sendData_real));
+					sendData(true, true);
+				}
 				break;
 			}
 		}
@@ -643,10 +679,13 @@ public class ScanDisplayActivity extends Activity{
 			break;	
 		case REQUEST_PARAM:
 			if (resultCode == RESULT_OK) {
-				String paramConfig = intent.getStringExtra("params");
+				sendString = intent.getStringExtra("params");
 				frequency_value = intent.getIntArrayExtra("value");
-				times = intent.getIntExtra("times", 10);//默认是10
-				sendData = ConvertUtils.hexStringToBytes(paramConfig);
+				times = intent.getIntExtra("times", 1024);//默认是10
+				sendData_real = ConvertUtils.hexStringToBytes(sendString);//次数正确 要修改的是频率
+				//将其设置为2次				
+				sendData = ConvertUtils.hexStringToBytes(sendString.substring(0, sendString.length()-10) + "0200" + sendString.substring(sendString.length()-6));
+				
 			}
 			break;
 		}
