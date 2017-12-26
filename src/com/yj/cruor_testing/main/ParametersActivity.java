@@ -17,6 +17,7 @@ public class ParametersActivity extends Activity {
 	private int end_frq_original;
 	private int frq_interval_original;
 	private int times_original;//次数
+	private int test_times;//测试次数
 	private String start_frq; // 开始频率 两个字节
 	private String end_frq; // 截止频率 两个字节
 	private String frq_interval;// 步进频率 1个字节
@@ -33,6 +34,8 @@ public class ParametersActivity extends Activity {
 	private EditText et_enlarge; // 程控放大 2个字节
 	private EditText et_times; // 扫描次数 2个字节
 	private EditText et_interval_time;// 多次扫描时间间隔
+	//新增
+	private EditText et_test_times;//测试次数
 	private String resultData;// 结果数据 将数据专场16进制字符串 并且两个字节的数据低字节在前 ，高字节在后
 	// private StringBuilder buffer;
 	private Button btn_confirm;// 确定设置 并且关闭当前活动 将数据返回
@@ -55,6 +58,7 @@ public class ParametersActivity extends Activity {
 				intent.putExtra("params", resultData);
 				intent.putExtra("value", new int[] { start_frq_original, end_frq_original, frq_interval_original });
 				intent.putExtra("times", times_original);
+				intent.putExtra("testtimes", test_times);//测试次数发送过去
 				setResult(RESULT_OK, intent);
 				finish();
 			}
@@ -95,6 +99,8 @@ public class ParametersActivity extends Activity {
 		times = HighExchangeLow(times);
 		interval_time = dataConvertHex(et_interval_time.getText().toString().trim());// 多次扫描时间间隔
 		interval_time = HighExchangeLow(interval_time);
+		//测试次数
+		test_times = Integer.parseInt(et_test_times.getText().toString().trim());//测试次数
 	}
 
 	// 初始化控件
@@ -110,12 +116,14 @@ public class ParametersActivity extends Activity {
 		et_enlarge = (EditText) findViewById(R.id.enlarge); // 程控放大 2个字节
 		et_times = (EditText) findViewById(R.id.times); // 扫描次数 2个字节
 		et_interval_time = (EditText) findViewById(R.id.interval_time);// 多次扫描时间间隔
+		
+		et_test_times = (EditText) findViewById(R.id.test_times);//测试次数
 	}
 
 	/*
 	 * 将数据转成十六进制
 	 */
-	public String dataConvertHex(String data) {
+	public static String dataConvertHex(String data) {
 		String str = Long.toHexString(Long.parseLong(data)).toUpperCase();
 		str = str.length() % 2 == 0 ? str : "0" + str;
 		return str;

@@ -53,6 +53,7 @@ import android.view.View.OnClickListener;
 import android.view.ViewGroup.LayoutParams;
 import android.view.WindowManager;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -65,9 +66,12 @@ public class ScanDisplayActivity extends Activity{
 	public static final String EXTRAS_DEVICE_ADDRESS = "DEVICE_ADDRESS";//从上一个活动中
 	private static final int REQUEST_ENABLE_BT = 1;//选择是否打开蓝牙对话框
 	private static final int REQUEST_PARAM = 2;//请求参数配置
-	private Button btn_Start_Scan,btn_Stop_Scan,btn_Param_Config;//开始，停止采集，参数配置
+	private Button btn_Start_Scan,btn_Stop_Scan,btn_Param_Config, btn_Clear_Test;//开始，停止采集，参数配置,删除本次的测试记录在文件中
 	private Button btn_change;//显示指标部分与原始曲线数据结果显示切换
 	private TextView tv_times;//显示第几次扫描结束
+	private AlertDialog dialogDemo;
+	//输入框输入样品测试样品名称
+	private String sampleID = "";
 	//蓝牙4.0 设置
 	private String mDeviceAddress;//连接设备地址
 	private BluetoothLeService mBluetoothLeService;//蓝牙服务
@@ -85,10 +89,10 @@ public class ScanDisplayActivity extends Activity{
 	private View view;//指标显示部分
 	//发送控制指令数据 默认100Hz - 120Hz步进50Hz 10ms 2次 
 	String sendString = "861101011027e02e3202800200020004050068";
-	byte[] sendData = ConvertUtils.hexStringToBytes("861101011027e02e3202800200020200050068");// 要发送的数据 字节数据 故此先将16进制字符串转换成字节发送
-	byte[] sendData_real = ConvertUtils.hexStringToBytes("861101011027e02e3202800200020004050068");
+	byte[] sendData = ConvertUtils.hexStringToBytes("861101011027e02e3202800200020400050068");// 要发送的数据 字节数据 故此先将16进制字符串转换成字节发送
+	byte[] sendData_real = ConvertUtils.hexStringToBytes("861101011027e02e3202800200020000050068");
 	byte[] sendData_stop = ConvertUtils.hexStringToBytes("8603030168");// 要发送停止扫描的数据 表示用来
-	boolean isFirstSend = true;//是否是第一次发送
+	boolean isFirstSend;//是否是第一次发送
 	MyHandler handler;// 定义消息队列处理
 	
 	// 画曲线用得着
@@ -107,7 +111,7 @@ public class ScanDisplayActivity extends Activity{
 	private List<Byte> listByte;
 //	private int count = 401;// 一次多少个频率点
 	private int iCount = 0;// 判断当前扫描第几次的数据到来
-	private int times_point = 3;//系统屏幕大概亮多少次的时候暗屏默认是3次的时候暗屏
+	private int times_point = 10;//系统屏幕大概亮多少次的时候暗屏默认是3次的时候暗屏
 	private String title = "幅值曲线";// 曲线显示的标题
 	private String title_result = "凝血曲线";
 
@@ -119,10 +123,12 @@ public class ScanDisplayActivity extends Activity{
 
 	private int[] frequency_value = { 100, 120, 50 };// 从参数配置传上来的起止频率 步进频率 默认为100,120,50
 	private int pointCount;//一次多少个点
-	private int times = 1024;//默认是10次
+	private int times = 0;//默认是10次
+	private int test_times = 4;//测试的次数 默认是2次
 	// 保存excel使用的变量
 //	private String excelPath;// 保存到sd卡路径
 	private String str_date;//保存的时候的当前时间字符串
+	private String filename;//文件名
 	private File excel_Source_File, excel_Result_File, excel_Filter_File;// excel文件保存原始数据, 保存结果数据, 保存原始数据滤波之后的数据
 	
 	//计算的参数结果
@@ -169,7 +175,6 @@ public class ScanDisplayActivity extends Activity{
 		Intent gattServiceIntent = new Intent(this,BluetoothLeService.class);
 		bindService(gattServiceIntent, mServiceConnection, BIND_AUTO_CREATE);//表明活动和服务进行绑定后自动创建服务
 		
-		
 		//定时器不能一直启动关闭  故此在活动创建的时候启动  单例的
 		timer.schedule(new TimerTask() {
 			@Override
@@ -182,7 +187,28 @@ public class ScanDisplayActivity extends Activity{
 			public void onClick(View v) {
 				btn_Start_Scan.setKeepScreenOn(true);//开始扫描之后就要让屏幕保持常亮
 				isFirstSend = true;
-				sendData(true,false);//发送数据
+				Builder builder=new AlertDialog.Builder(ScanDisplayActivity.this);
+				final EditText et = new EditText(ScanDisplayActivity.this);
+			    builder.setTitle("请输入样品id");
+			    builder.setIcon(android.R.drawable.ic_dialog_info);
+			    builder.setView(et);
+			    builder.setPositiveButton("确定", new DialogInterface.OnClickListener() {
+					@Override
+					public void onClick(DialogInterface dialog, int which) {
+						sampleID = et.getText().toString();
+						if(sampleID.trim().equals("")){
+							keepDialogOpen(dialogDemo);
+							Toast.makeText(ScanDisplayActivity.this, "请输入", Toast.LENGTH_SHORT).show();
+						}else{
+							sendData(true,false);//发送数据
+							closeDialog(dialogDemo);
+							dialog.dismiss();
+						}
+					}
+				});
+			    builder.setNegativeButton("取消", null);
+			    dialogDemo =builder.create();
+			    dialogDemo.show();
 			}
 		});
 		//停止扫描
@@ -200,6 +226,19 @@ public class ScanDisplayActivity extends Activity{
 				// 启动参数配置的活动 进入活动
 				Intent intent = new Intent(ScanDisplayActivity.this, ParametersActivity.class);
 				startActivityForResult(intent, REQUEST_PARAM);
+			}
+		});
+		//清除本次测试
+		btn_Clear_Test.setOnClickListener(new OnClickListener() {
+			@Override
+			public void onClick(View v) {
+				String filePath  = SaveActionUtils.getExcelDir() + "/" + filename;
+				boolean deleteFile = SaveActionUtils.deleteFile(filePath);//删除Result文件
+				filePath = SaveActionUtils.getExcelDir() + "/" + filename.substring(0, filename.indexOf("_") + 1) + "Source.csv";
+				deleteFile = SaveActionUtils.deleteFile(filePath);
+				filePath = SaveActionUtils.getExcelDir() + "/" + filename.substring(0, filename.indexOf("_") + 1) + "Result.csv";
+				deleteFile = SaveActionUtils.deleteFile(filePath);
+				Toast.makeText(ScanDisplayActivity.this, "清除本次成功", Toast.LENGTH_SHORT).show();
 			}
 		});
 		//切换view  结果显示与指标显示切换
@@ -258,6 +297,7 @@ public class ScanDisplayActivity extends Activity{
 		btn_Start_Scan = (Button)findViewById(R.id.startScan);//开始扫描按钮
 		btn_Stop_Scan = (Button)findViewById(R.id.stopScan);//停止扫描按钮
 		btn_Param_Config = (Button)findViewById(R.id.param_config);//参数配置按钮
+		btn_Clear_Test = (Button)findViewById(R.id.clearTest);//从文件中删除本次测试记录按钮
 		tv_times = (TextView)findViewById(R.id.times);//显示当前状态的tx
 		btn_change = (Button)findViewById(R.id.btn_change);//控件切换按钮
 		view = View.inflate(ScanDisplayActivity.this, R.layout.param_result, null);//显示view控件
@@ -296,13 +336,13 @@ public class ScanDisplayActivity extends Activity{
 		// 每次打开软件的时候即默认新建一个excel表格 表名是当前时间
 		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 		str_date = sdf.format(new Date()).toString();
-		String filename = str_date + "_Source" + ".csv";
+		filename = str_date + sampleID + "_Source" + ".csv";
 //		excelPath = SaveActionUtils.getExcelDir() + File.separator + filename;
 		// 当前路径/mnt/sdcart/Excel/Data/当前时间.xls
 		excel_Source_File = new File(SaveActionUtils.getExcelDir() + File.separator + filename);// 得到当前这个文件=
-		filename = str_date + "_Result" + ".csv";
+		filename = str_date + sampleID + "_Result" + ".csv";
 		excel_Result_File = new File(SaveActionUtils.getExcelDir() + File.separator + filename);
-		filename = str_date + "_Filter" + ".csv";
+		filename = str_date + sampleID + "_Filter" + ".csv";
 		excel_Filter_File = new File(SaveActionUtils.getExcelDir() + File.separator + filename);
 	}
 	
@@ -421,6 +461,7 @@ public class ScanDisplayActivity extends Activity{
 			mBluetoothLeService.connect(mDeviceAddress);
 			break;
 		case R.id.menu_disconnect:
+			Log.e("#####", "you click disconnect");
 			mBluetoothLeService.disconnect();
 			break;
 		}
@@ -602,7 +643,7 @@ public class ScanDisplayActivity extends Activity{
 					btn_Start_Scan.setKeepScreenOn(false);//扫描结束不需要再保持屏幕常亮
 				}
 				tv_times.setText("第" + iCount + "次扫描结束");
-				if(iCount == 2 && isFirstSend){
+				if(iCount == test_times && isFirstSend){
 					isFirstSend = false;//说明是第一次发送然后重新计算起止频率
 					//最大值和最小值所在的频率点 强转成int
 					double minFrequency = xList.get(yList.indexOf(Collections.max(yList))) * 100;
@@ -620,7 +661,9 @@ public class ScanDisplayActivity extends Activity{
 							ConvertUtils.HighExchangeLow(ConvertUtils.dataConvertHex(frequency_value[1] + "00")) +
 							sendString.substring(16));//重新计算
 					Log.e("#####", ConvertUtils.bytesToHexString(sendData_real));
-					sendData(true, true);
+					if(times != 0){//若发送为0次代表仅是测试
+						sendData(true, true);
+					}
 				}
 				break;
 			}
@@ -681,11 +724,15 @@ public class ScanDisplayActivity extends Activity{
 			if (resultCode == RESULT_OK) {
 				sendString = intent.getStringExtra("params");
 				frequency_value = intent.getIntArrayExtra("value");
-				times = intent.getIntExtra("times", 1024);//默认是10
+				times = intent.getIntExtra("times", 0);//默认是10
+				test_times = intent.getIntExtra("testtimes", 4);
 				sendData_real = ConvertUtils.hexStringToBytes(sendString);//次数正确 要修改的是频率
 				//将其设置为2次				
-				sendData = ConvertUtils.hexStringToBytes(sendString.substring(0, sendString.length()-10) + "0200" + sendString.substring(sendString.length()-6));
-				
+				sendData = ConvertUtils.hexStringToBytes(sendString.substring(0, sendString.length()-10) + 
+						ParametersActivity.HighExchangeLow(ParametersActivity.dataConvertHex(String.valueOf(test_times))) + 
+						sendString.substring(sendString.length()-6));
+//				sendData= ConvertUtils.hexStringToBytes(sendString.toLowerCase());
+				Log.e("sendData", sendString);
 			}
 			break;
 		}
@@ -793,10 +840,32 @@ public class ScanDisplayActivity extends Activity{
   			//说明是在采集中 在扫描中 将其暗屏
 //  			Toast.makeText(this, "屏幕点击事件", Toast.LENGTH_SHORT).show();
   			setScreenBrightness(getSystemScreenBrightness());//但是隔一段时间自动暗屏，如果是在扫描的时候的话
-  			times_point = iCount + 2;
+  			times_point = iCount + 10;
   		}//如果不是 是暗屏的状态就不管
   		return super.onTouchEvent(event);
   	}
+  	
+  //保持dialog不关闭的方法  
+    private void keepDialogOpen(AlertDialog dialog) {  
+        try {  
+            java.lang.reflect.Field field = dialog.getClass().getSuperclass().getDeclaredField("mShowing");  
+            field.setAccessible(true);  
+            field.set(dialog, false);  
+        } catch (Exception e) {  
+            e.printStackTrace();  
+        }  
+    }  
+    //关闭dialog的方法  
+    private void closeDialog(AlertDialog dialog) {  
+        try {  
+            java.lang.reflect.Field field = dialog.getClass().getSuperclass().getDeclaredField("mShowing");  
+            field.setAccessible(true);  
+            field.set(dialog, true);  
+        } catch (Exception e) {  
+            e.printStackTrace();  
+        }  
+    }  
+  	
 	//Start    Java的JNI技术
 	static{
 		System.loadLibrary("CALLC");

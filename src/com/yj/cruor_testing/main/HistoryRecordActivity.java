@@ -75,7 +75,7 @@ public class HistoryRecordActivity extends Activity implements OnClickListener{
 		}
 		//将自己添加到的也可以显示出来  只要是csv文件即可
 		for (File file : files) {
-			if(file.getName().contains("Result") || !file.getName().contains("Source")){
+			if(file.getName().contains("Result") || (!file.getName().contains("Source") && !file.getName().contains("Filter"))){
 				if(!file.getName().contains("_new") && !file.getPath().contains(".txt")){
 					listFileName.add(file.getName());
 				}
@@ -234,9 +234,11 @@ public class HistoryRecordActivity extends Activity implements OnClickListener{
 			//然后从文件中删除该文件 ----再删除包含前面时间的  Resource文件---删除数据库里面的数据   根据时间
 			String fileName = listFileName.get(longClickPosition);
 			String filePath  = SaveActionUtils.getExcelDir() + "/" + fileName;
-			boolean deleteFile = deleteFile(filePath);//删除Result文件
+			boolean deleteFile = SaveActionUtils.deleteFile(filePath);//删除Result文件
 			filePath = SaveActionUtils.getExcelDir() + "/" + fileName.substring(0, fileName.indexOf("_") + 1) + "Source.csv";
-			deleteFile = deleteFile(filePath);
+			deleteFile = SaveActionUtils.deleteFile(filePath);
+			filePath = SaveActionUtils.getExcelDir() + "/" + fileName.substring(0, fileName.indexOf("_") + 1) + "Filter.csv";
+			deleteFile = SaveActionUtils.deleteFile(filePath);
 			//根据当前时间 删除 数据库里面的    //查询数据库显示所有记录在列表中 目前先显示出来再说 Log打印
 			SQLiteDatabase db = MainActivity.dbHelper.getWritableDatabase();//调用可写入的数据库
 			int result = db.delete("Params", "date=?", new String[]{fileName.substring(0, fileName.indexOf("_"))});
@@ -249,17 +251,6 @@ public class HistoryRecordActivity extends Activity implements OnClickListener{
 		}
 	}
 	
-	/**
-     * 删除单个文件
-     * @param   filePath    被删除文件的文件名
-     * @return 文件删除成功返回true，否则返回false
-     */
-    public boolean deleteFile(String filePath) {
-    	File file = new File(filePath);
-        if (file.isFile() && file.exists()) {
-        return file.delete();
-        }
-        return false;
-    }
+	
 
 }

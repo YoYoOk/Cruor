@@ -20,7 +20,8 @@
     <!-- 显示部分 -->
     <string name="param_config">参数配置</string>
     <string name="startScan">开始</string>
-    <string name="stopScan">停止采集</string>
+    <string name="stopScan">停止</string>
+    <string name="clearTest">清除</string>
 
     <!-- 参数设置部分 -->
     <string name="start_frq_tv">起始频率:</string>
@@ -41,7 +42,7 @@
     <string name="interval_time_unit">*5mS</string>
     <string name="confirm_set">确 定</string>
     <string name="cancel_set">取 消</string>
-
+	<string name="test_times_tv">测试次数:</string>
     <string-array name="result_operation">
         <item>保存记录</item>
         <item>删除记录</item>
