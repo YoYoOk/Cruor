@@ -643,7 +643,7 @@ public class ScanDisplayActivity extends Activity{
 					btn_Start_Scan.setKeepScreenOn(false);//扫描结束不需要再保持屏幕常亮
 				}
 				tv_times.setText("第" + iCount + "次扫描结束");
-				if(iCount == test_times && isFirstSend){
+				if(iCount == test_times && isFirstSend && times != 0){
 					isFirstSend = false;//说明是第一次发送然后重新计算起止频率
 					//最大值和最小值所在的频率点 强转成int
 					double minFrequency = xList.get(yList.indexOf(Collections.max(yList))) * 100;
@@ -661,9 +661,9 @@ public class ScanDisplayActivity extends Activity{
 							ConvertUtils.HighExchangeLow(ConvertUtils.dataConvertHex(frequency_value[1] + "00")) +
 							sendString.substring(16));//重新计算
 					Log.e("#####", ConvertUtils.bytesToHexString(sendData_real));
-					if(times != 0){//若发送为0次代表仅是测试
+					//if(){//若发送为0次代表仅是测试
 						sendData(true, true);
-					}
+					//}
 				}
 				break;
 			}

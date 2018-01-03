@@ -5,7 +5,13 @@ package com.yj.cruor_testing.util;
  */
 public class ConvertUtils {
 	// 将字节数组转换成字符串发送
+		/**
+		 * 字节数组转换成字符串发送
+		 * @param 字节数组
+		 * @return 十六进制字符串
+		 */
 		public static String bytesToHexString(byte[] bytes) {
+			
 			String result = "";
 			for (int i = 0; i < bytes.length; i++) {
 				String hexString = Integer.toHexString(bytes[i] & 0xff);
@@ -17,6 +23,7 @@ public class ConvertUtils {
 			return result;
 			//这种方式效率很低，此种方式会产生一大堆需要回收的中间对象  byte数组长度有多少，就会产生相应的string多余的
 			//采用String.format()的方式
+			
 //			StringBuilder result = new StringBuilder();
 //			for(byte b : bytes){
 //				result.append(String.format("%02X", b));//把一个字节转换成16进制  %02X表示16进制大写 占2个字符  若长度为1  前面补0
